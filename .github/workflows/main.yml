@@ -34,24 +34,37 @@ jobs:
     - name: Clone Submodules
       run: git submodule update --init --recursive
 
-    - name: Kernel Configure
+    - name: Kernel Configure (Direct make)
       run: |
-        ./build config model=d2s name="CRUEL-V3.4" +magisk
+        cd kernel
+        make ARCH=arm64 exynos9820-d2s_defconfig
+        ./scripts/config --enable CONFIG_RTL8812AU
 
-    - name: Kernel Build
-      run: ./build :build
+    - name: Kernel Build (Direct make)
+      run: |
+        cd kernel
+        make ARCH=arm64 -j$(nproc)
 
-    - name: Create boot.img
-      run: ./build :mkimg
+    - name: Create boot.img (Manual)
+      run: |
+        # 复制编译好的内核和 DTB
+        cp kernel/arch/arm64/boot/Image.gz .
+        cp kernel/arch/arm64/boot/dts/exynos/exynos9820-d2s.dtb .
+        
+        # 使用 mkbootimg 打包
+        mkbootimg \
+          --kernel Image.gz \
+          --ramdisk /dev/null \
+          --dtb exynos9820-d2s.dtb \
+          --cmdline "androidboot.hardware=exynos9820 androidboot.selinux=permissive" \
+          --base 0x10000000 \
+          --pagesize 2048 \
+          --os_version 11.0.0 \
+          --os_patch_level 2023-12-01 \
+          --output boot.img
 
     - name: Upload Kernel
       uses: actions/upload-artifact@v4
       with:
         name: ThunderStormsKernel-d2s
         path: boot.img
-
-    - name: Upload Kernel Info
-      uses: actions/upload-artifact@v4
-      with:
-        name: ConfigurationInfo-d2s
-        path: config.*
