@@ -24,6 +24,8 @@ jobs:
         sudo mv avbtool /usr/local/bin/avbtool
     - name: Clone Submodules
       run: git submodule update --init --recursive
+    - name: Check build script usage
+      run: ./build config --help || ./build help || true
     - name: Kernel Configure
       run: |
         ./build config                   \
