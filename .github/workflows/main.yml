@@ -6,35 +6,54 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        model: [ "N975F" ]
+
     steps:
     - uses: actions/checkout@v1
-
-    - name: Setup Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Fix regex escape sequences in build script
-      run: |
-        sed -i "s/re.match('^ts\[+-\]\?.*\\\.conf$', f)/re.match(r'^ts[+-]?.*\\.conf$', f)/g" build
-        sed -i "s/re.match('^v\\\d+\\\.\\\d+', value)/re.match(r'^v\\d+\\.\\d+', value)/g" build
-
     - name: Install mkbootimg
       run: |
         wget -q https://android.googlesource.com/platform/system/tools/mkbootimg/+archive/refs/heads/master.tar.gz -O - | tar xzf - mkbootimg.py
         chmod +x mkbootimg.py
         sudo mv mkbootimg.py /usr/local/bin/mkbootimg
-
     - name: Install avbtool
       run: |
         wget -q https://android.googlesource.com/platform/external/avb/+archive/refs/heads/android10-dev.tar.gz -O - | tar xzf - avbtool
         chmod +x avbtool
         sudo mv avbtool /usr/local/bin/avbtool
-
     - name: Clone Submodules
       run: git submodule update --init --recursive
-
-    - name: Kernel Configure (Direct make)
+    - name: Kernel Configure
+      run: |
+        ./build config                   \
+                model=${{ matrix.model}} \
+                name="CRUEL-V3.4"        \
+                +magisk                  \
+                +nohardening             \
+                +ttl                     \
+                +wireguard               \
+                +cifs                    \
+                +sdfat                   \
+                +ntfs                    \
+                +morosound               \
+                +boeffla_wl_blocker      \
+                +ts_config               \
+        2>&1 | tee config.info
+    - name: Kernel Build
+      run: ./build :build
+    - name: Create boot.img
+      run: ./build :mkimg
+    - name: Upload Kernel
+      uses: actions/upload-artifact@v2
+      with:
+        name: ThunderStormsKernel-${{ matrix.model }}
+        path: boot.img
+    - name: Upload Kernel Info
+      uses: actions/upload-artifact@v2
+      with:
+        name: ConfigurationInfo-${{ matrix.model }}
+        path: config.*    - name: Kernel Configure (Direct make)
       run: |
         cd kernel
         make ARCH=arm64 exynos9820-d2s_defconfig
