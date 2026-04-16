@@ -6,10 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        model: [ "d2s" ]
-
     steps:
     - uses: actions/checkout@v1
 
@@ -38,16 +34,9 @@ jobs:
     - name: Clone Submodules
       run: git submodule update --init --recursive
 
-    - name: Check build script usage
-      run: ./build config --help || ./build help || true
-
     - name: Kernel Configure
       run: |
-        ./build config                   \
-                model=${{ matrix.model}} \
-                name="CRUEL-V3.4"        \
-                +magisk                  \
-        2>&1 | tee config.info
+        ./build config model=d2s name="CRUEL-V3.4" +magisk
 
     - name: Kernel Build
       run: ./build :build
@@ -58,11 +47,11 @@ jobs:
     - name: Upload Kernel
       uses: actions/upload-artifact@v4
       with:
-        name: ThunderStormsKernel-${{ matrix.model }}
+        name: ThunderStormsKernel-d2s
         path: boot.img
 
     - name: Upload Kernel Info
       uses: actions/upload-artifact@v4
       with:
-        name: ConfigurationInfo-${{ matrix.model }}
+        name: ConfigurationInfo-d2s
         path: config.*
